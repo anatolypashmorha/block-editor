@@ -1,6 +1,6 @@
 import {DropTargetMonitor, useDrag, useDrop} from "react-dnd";
 import {create} from "zustand";
-import {useEffect} from "react";
+import React, { useEffect, useRef, useState} from "react";
 
 
 export const ItemTypes = {
@@ -10,7 +10,8 @@ export const ItemTypes = {
     WRAPPER: 'WRAPPER',
 }
 
-export interface BEditorState {
+export interface BEditorStore {
+    selected: string | null,
     wrappersArray: string[],
     wrappers: Map<string, string[]>,
     sections: Map<string, string[]>,
@@ -29,6 +30,8 @@ export interface BEditorState {
         columns: Map<string, string[]>,
     }
 
+    select: (id: string | null) => void
+
     addBlock: (block: string, toColumn: string, atIndex: number) => void
     moveBlock: (block: string, toColumn: string, atIndex: number) => void
     removeBlock: (block: string) => void
@@ -45,7 +48,8 @@ export interface BEditorState {
     moveWrapper: (wrapper: string, atIndex: number) => void
 }
 
-export const useBEditorState = create<BEditorState>((set, get) => ({
+export const useBEditorStore = create<BEditorStore>((set, get) => ({
+    selected: null,
     wrappersArray: [],
     wrappers: new Map(),
     sections: new Map(),
@@ -66,6 +70,10 @@ export const useBEditorState = create<BEditorState>((set, get) => ({
             sections: get().sections,
             columns: get().columns,
         }
+    },
+
+    select: (id: string | null) => {
+        set({ selected: id })
     },
 
     addBlock: (block: string, toColumn: string, atIndex: number) => {
@@ -232,7 +240,7 @@ export const useBEditorState = create<BEditorState>((set, get) => ({
 }))
 
 export const BEditorContainer = () => {
-    const { loadState } = useBEditorState()
+    const { loadState } = useBEditorStore()
 
     useEffect(() => {
         loadState(
@@ -267,7 +275,7 @@ export const BEditorContainer = () => {
 }
 
 export const Container = () => {
-    const state = useBEditorState
+    const state = useBEditorStore
 
     const wrappersElements = state.getState().wrappersArray.map((wrapper) => <Wrapper key={wrapper} id={wrapper} />)
 
@@ -317,6 +325,8 @@ export const Container = () => {
 }
 
 export const Wrapper = ({ id }: {id: string}) => {
+    const { inside, selected, handlers } = useSelectable(id)
+
     const [{ isDragging }, drag] = useDrag(
         () => ({
             type: ItemTypes.WRAPPER,
@@ -328,7 +338,7 @@ export const Wrapper = ({ id }: {id: string}) => {
         [id],
     );
 
-    const { wrappers, moveSection } = useBEditorState()
+    const { wrappers, moveSection } = useBEditorStore()
     const wrapper = wrappers.get(id)
     const wrapperSections = wrapper?.map((section) => <Section key={section} id={section} />)
 
@@ -384,9 +394,12 @@ export const Wrapper = ({ id }: {id: string}) => {
     return (
         <div
             ref={ref}
+            {...handlers}
             id={id}
             style={{
-                border: isOver? '1px solid #5e072e' : '1px dashed #5e072e66',
+                borderWidth: '1px',
+                borderStyle: isOver || selected === id ? 'solid' : 'dashed',
+                borderColor: isOver || inside ? '#5e072e' : '#5e072e66',
                 padding: '0 0.3rem',
                 margin: '0.3rem',
                 backgroundColor: 'white',
@@ -402,6 +415,8 @@ export const Wrapper = ({ id }: {id: string}) => {
 }
 
 const Section = ({ id }: {id: string}) => {
+    const { inside, selected, handlers } = useSelectable(id)
+
     const [{ isDragging }, drag] = useDrag(
         () => ({
             type: ItemTypes.SECTION,
@@ -413,7 +428,7 @@ const Section = ({ id }: {id: string}) => {
         [id],
     );
 
-    const { sections } = useBEditorState()
+    const { sections } = useBEditorStore()
     const section = sections.get(id)
     const sectionColumns = section?.map((column) => <Column key={column} id={column} />)
 
@@ -421,8 +436,12 @@ const Section = ({ id }: {id: string}) => {
         <div
             ref={drag}
             id={id}
+            {...handlers}
             style={{
-                border: '1px dashed #fffe3466',
+                border: '1px dashed #feb93866',
+                borderWidth: '1px',
+                borderStyle: selected === id ? 'solid' : 'dashed',
+                borderColor: inside ? '#feb938' : '#feb93866',
                 margin: '0.3rem 0',
                 padding: '0.3rem 0',
                 backgroundColor: 'white',
@@ -440,7 +459,9 @@ const Section = ({ id }: {id: string}) => {
 }
 
 export const Column = ( {id}: {id: string}) => {
-    const { columns, moveBlock } = useBEditorState()
+    const { columns, moveBlock } = useBEditorStore()
+    const { inside, selected, handlers } = useSelectable(id)
+
     const column = columns.get(id)
     const blocks = column?.map((block) => <Block key={block} id={block} />)
 
@@ -492,11 +513,14 @@ export const Column = ( {id}: {id: string}) => {
         <div
             ref={drop}
             id={id}
+            {...handlers}
             style={{
                 minWidth: '50px',
                 minHeight: '50px',
                 flexGrow: 1,
-                border: isOver ? '1px solid #2196f3' : '1px dashed #327e4066',
+                borderWidth: '1px',
+                borderStyle: isOver || selected === id ? 'solid' : 'dashed',
+                borderColor: isOver || inside ? '#41a453' : '#41a45366',
                 padding: 0,
                 margin: '0 0.3rem',
                 backgroundColor: 'white',
@@ -512,6 +536,9 @@ export const Column = ( {id}: {id: string}) => {
 }
 
 export const Block = ({ id }: {id: string}) => {
+    const div = useRef<HTMLDivElement>()
+
+    const { inside, selected, handlers } = useSelectable(id)
     const [{ isDragging }, drag] = useDrag(
         () => ({
             type: ItemTypes.BLOCK,
@@ -523,14 +550,22 @@ export const Block = ({ id }: {id: string}) => {
         [id],
     );
 
+    const ref = (element: HTMLDivElement) => {
+        drag(element);
+        div.current = element;
+    };
+
     return (
         <div
-            ref={drag}
+            ref={ref}
             id={id}
+            {...handlers}
             style={{
                 minWidth: '50px',
                 minHeight: '50px',
-                border: '1px dashed #2196f366',
+                borderWidth: '1px',
+                borderStyle: selected === id ? 'solid' : 'dashed',
+                borderColor: inside ? '#2196f3' : '#2196f366',
                 padding: '0.3rem 0.3rem',
                 margin: '0.3rem',
                 backgroundColor: 'white',
@@ -542,4 +577,33 @@ export const Block = ({ id }: {id: string}) => {
             {id}
         </div>
     );
+}
+
+function useSelectable(id: string) {
+    const [inside, setInside] = useState(false);
+    const { select, selected } = useBEditorStore();
+
+    const handleMouseOver = (event: React.MouseEvent<HTMLDivElement>) => {
+        if (event.target === event.currentTarget) {
+            setInside(true);
+        }
+    }
+
+    const handleMouseOut = () => {
+        setInside(false);
+    }
+
+    const handleClick = () => {
+        inside && select( selected === id ? null : id )
+    }
+
+    return {
+        inside,
+        selected,
+        handlers: {
+            onMouseOver: handleMouseOver,
+            onMouseOut: handleMouseOut,
+            onClick: handleClick
+        }
+    };
 }
