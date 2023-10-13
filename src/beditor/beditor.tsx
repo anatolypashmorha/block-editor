@@ -460,7 +460,6 @@ const Section = ({ id }: {id: string}) => {
 
 export const Column = ( {id}: {id: string}) => {
     const { columns, moveBlock } = useBEditorStore()
-    const { inside, selected, handlers } = useSelectable(id)
 
     const column = columns.get(id)
     const blocks = column?.map((block) => <Block key={block} id={block} />)
@@ -513,14 +512,13 @@ export const Column = ( {id}: {id: string}) => {
         <div
             ref={drop}
             id={id}
-            {...handlers}
             style={{
                 minWidth: '50px',
                 minHeight: '50px',
                 flexGrow: 1,
                 borderWidth: '1px',
-                borderStyle: isOver || selected === id ? 'solid' : 'dashed',
-                borderColor: isOver || inside ? '#41a453' : '#41a45366',
+                borderStyle: isOver ? 'solid' : 'dashed',
+                borderColor: isOver ? '#41a453' : '#41a45366',
                 padding: 0,
                 margin: '0 0.3rem',
                 backgroundColor: 'white',
@@ -606,4 +604,91 @@ function useSelectable(id: string) {
             onClick: handleClick
         }
     };
+}
+
+type Spacing = {
+    type: 'spacing',
+    top: number,
+    right: number,
+    bottom: number,
+    left: number,
+}
+
+type TextProps = {
+    type: 'text',
+    fontSize: number,
+    fontWeight: number,
+    color: string,
+    fontFamily: string,
+    align: 'left' | 'center' | 'right',
+    underline: boolean,
+}
+
+type LinkProps = {
+    type: 'link',
+    url: string,
+    active: boolean,
+}
+
+// Wrappers
+
+type ContainerProps = {
+    type: 'container',
+
+    backgroundColor: string,
+    margin: Spacing,
+    padding: Spacing,
+    width: number,
+    breakPoint: number,
+    linkProps: TextProps,
+    textProps: TextProps,
+}
+
+type WrapperProps = {
+    type: 'wrapper',
+    margin: Spacing,
+    padding: Spacing,
+    backgroundColor: string,
+}
+
+type SectionProps = {
+    type: 'section',
+    margin: Spacing,
+    padding: Spacing,
+    backgroundColor: string,
+}
+
+type ColumnProps = {
+    type: 'column',
+    width: number,
+    autoWidth: boolean,
+    padding: Spacing,
+    backgroundColor: string,
+}
+
+// Blocks
+type HeadingProps = {
+    type: 'heading',
+    text: string,
+    textProps: TextProps,
+    margin: Spacing,
+    link: LinkProps,
+}
+
+type ParagraphProps = {
+    type: 'paragraph',
+    text: string,
+    textProps: TextProps,
+    margin: Spacing,
+}
+
+type ImageProps = {
+    type: 'image',
+    url: string,
+    width: number,
+    height: number,
+    alt: string,
+    align: 'left' | 'center' | 'right',
+    margin: Spacing,
+    link: LinkProps
 }
