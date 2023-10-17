@@ -1,6 +1,7 @@
 import {DropTargetMonitor, useDrag, useDrop} from "react-dnd";
 import {create} from "zustand";
 import React, { useEffect, useRef, useState} from "react";
+import {StoreToHtml} from "./components/storeToHtml.tsx";
 
 
 export const ItemTypes = {
@@ -11,6 +12,7 @@ export const ItemTypes = {
 }
 
 export interface BEditorStore {
+    props: Map<string, Wrappers | Blocks>
     selected: string | null,
     wrappersArray: string[],
     wrappers: Map<string, string[]>,
@@ -49,6 +51,7 @@ export interface BEditorStore {
 }
 
 export const useBEditorStore = create<BEditorStore>((set, get) => ({
+    props: new Map(),
     selected: null,
     wrappersArray: [],
     wrappers: new Map(),
@@ -269,6 +272,7 @@ export const BEditorContainer = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'row' }}>
+            <button onClick={() => console.log(StoreToHtml())}>Log HTML</button>
             <Container />
         </div>
     )
@@ -630,6 +634,8 @@ type LinkProps = {
     active: boolean,
 }
 
+type Wrappers = ContainerProps | WrapperProps | SectionProps | ColumnProps
+type Blocks = HeadingProps | ParagraphProps | ImageProps
 // Wrappers
 
 type ContainerProps = {
